@@ -422,6 +422,12 @@ int main(int argc, char **argv)
 		execvp(args[0], args);
 	}
 
+	FILE *fd = fopen("/var/run/funkey.pid", "w");
+	if (fd != NULL) {
+		fprintf(fd, "%d\n", son);
+		fclose(fd);
+	}
+
 	int status;
 	waitpid(son, &status, 0);
 
