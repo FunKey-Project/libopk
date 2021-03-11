@@ -433,7 +433,7 @@ int main(int argc, char **argv)
 
 	chdir("/");
 	umount(OPK_MOUNTPOINT);
-	rmdir(OPK_MOUNTPOINT);
+	//rmdir(OPK_MOUNTPOINT);
 
 	ioctl(loopfd, LOOP_CLR_FD, (void *)0);
 	close(loopfd);
