@@ -432,7 +432,27 @@ int main(int argc, char **argv)
 	waitpid(son, &status, 0);
 
 	chdir("/");
-	umount(OPK_MOUNTPOINT);
+
+	/** Multiple trials to unmount OPK_MOUNTPOINT */
+	#define MAX_UMOUNT_TRIALS	100
+	int retries = MAX_UMOUNT_TRIALS;
+	int res = -1;
+	while (retries && res){
+		res = umount(OPK_MOUNTPOINT);
+		/*printf("Res %d umounting %s, trial %d/%d\n", 
+			res, OPK_MOUNTPOINT, MAX_UMOUNT_TRIALS-retries+1, MAX_UMOUNT_TRIALS);*/
+
+		if(res)
+			usleep(50*1000);
+
+		retries--;
+	}
+
+	if(!retries){
+		printf("Error(%d) umounting %s\n", res, OPK_MOUNTPOINT);
+	}
+
+	/** Voluntarily commented */
 	//rmdir(OPK_MOUNTPOINT);
 
 	ioctl(loopfd, LOOP_CLR_FD, (void *)0);
