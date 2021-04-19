@@ -128,15 +128,6 @@ static int read_params(struct OPK *opk, struct params *params)
 			continue;
 		}
 
-		if (!strncmp(key, "FK-Keymap", skey)) {
-			if(sval < NB_PARAMS_MAX){
-				strncpy(params->keymap, val, sval);
-			} else {
-				fprintf(stderr, "FK-Keymap error: field length > %d\n", NB_PARAMS_MAX);
-			}
-			continue;
-		}
-
 		if (!strncmp(key, "Terminal", skey)) {
 			params->needs_terminal = !strncmp(val, "true", sval);
 			continue;
