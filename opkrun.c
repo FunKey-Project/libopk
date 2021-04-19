@@ -384,11 +384,6 @@ int main(int argc, char **argv)
 
 	free(params.exec[0]);
 
-	printf("arg = %d\n", arg);
-	for (arg = 0; args[arg]; arg++) {
-		printf("args[%d] = \"%s\"\n", arg, args[arg]);
-	}
-
 	umount(OPK_MOUNTPOINT);
 	mkdir(OPK_MOUNTPOINT, 0755);
 
@@ -459,7 +454,11 @@ int main(int argc, char **argv)
 
 	/* Then apply OPk keymap, if any */
 	if (params.keymap != NULL) {
-		sprintf(&command[7], "%s/%s", OPK_MOUNTPOINT, params.keymap);
+		if (params.keymap[0] == '/') {
+			sprintf(&command[7], params.keymap);
+		} else {
+			sprintf(&command[7], "%s/%s", OPK_MOUNTPOINT, params.keymap);
+		}
 		if (!access(&command[7], R_OK)) {
 			fp = popen(command, "r");
 			if (fp != NULL) {
