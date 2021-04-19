@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -43,7 +44,7 @@
 
 struct params {
 	char *exec[NB_PARAMS_MAX];
-	char *keymap[NB_PARAMS_MAX];
+	char *keymap;
 	bool needs_terminal, needs_joystick, needs_gsensor, needs_downscaling;
 };
 
@@ -108,6 +109,7 @@ static int read_params(struct OPK *opk, struct params *params)
 	const char *exec_name = NULL;
 	size_t exec_name_len = 0;
 
+	params->keymap = NULL;
 	for (;;) {
 		const char *key, *val;
 		size_t skey, sval;
@@ -152,6 +154,11 @@ static int read_params(struct OPK *opk, struct params *params)
 
 		if (!strncmp(key, "X-OD-NeedsDownscaling", skey)) {
 			params->needs_downscaling = !strncmp(val, "true", sval);
+			continue;
+		}
+
+		if (!strncmp(key, "FK-Keymap", skey)) {
+			params->keymap = strndup(val, sval);
 			continue;
 		}
 	}
@@ -386,6 +393,11 @@ int main(int argc, char **argv)
 
 	free(params.exec[0]);
 
+	printf("arg = %d\n", arg);
+	for (arg = 0; args[arg]; arg++) {
+		printf("args[%d] = \"%s\"\n", arg, args[arg]);
+	}
+
 	umount(OPK_MOUNTPOINT);
 	mkdir(OPK_MOUNTPOINT, 0755);
 
@@ -424,65 +436,59 @@ int main(int argc, char **argv)
 	if (params.needs_downscaling)
 		enable_downscaling();
 
-	
 	/* Apply keymaps if found */
 	char *dirc = strdup(args[arg - 1]);
 	char *dname = dirname(dirc);
 	char *basec = strdup(args[arg - 1]);
+	char *bname = basename(basec);
 	char *p, command[PATH_MAX];
 	FILE *fp;
-	
+
 	/* Initialize keymap command */
 	strcpy(command, "keymap ");
 
-	/* Compute basename without extension */
-	p = strrchr(basec, '.');
+	/*  Compute basename without suffix */
+	p = strrchr(bname, '.');
 	if (p) {
 		*p = '\0';
 	}
 
 	/* Apply console (directory) keymap first, if any */
 	sprintf(&command[7], "%s/default_config.key", dname);
-	//printf("console keymap command: \"%s\"\n", command);
 	if (!access(&command[7], R_OK)) {
 		fp = popen(command, "r");
 		if (fp != NULL) {
-			printf("Applied console keymap command: \"%s\"\n", command);
 			pclose(fp);
+		} else {
+			fprintf(stderr, "WARNING: Cannot apply console keymap command: \"%s\"\n",
+				command);
 		}
-		else{
-			fprintf(stderr, "WARNING: Cannot apply console keymap command: \"%s\"\n", command);
-		}	
 	}
 
 	/* Then apply OPk keymap, if any */
 	if (params.keymap != NULL) {
-		sprintf(&command[7], "%s", params.keymap);
-		//printf("OPK keymap command: \"%s\"\n", command);
+		sprintf(&command[7], "%s/%s", OPK_MOUNTPOINT, params.keymap);
 		if (!access(&command[7], R_OK)) {
 			fp = popen(command, "r");
 			if (fp != NULL) {
-				printf("Applied FK-Keymap command: \"%s\"\n", command);
 				pclose(fp);
+			} else {
+				fprintf(stderr, "WARNING: Cannot apply FK-Keymap command: \"%s\"\n",
+					command);
 			}
-			else{
-				fprintf(stderr, "WARNING: Cannot apply FK-Keymap command: \"%s\"\n", command);
-			}	
 		}
 	}
 
-	/* Apply game keymap, if any */
-	sprintf(&command[7], "%s.key", basec);
-	//printf("game keymap \"%s\"\n", command);
+	/* Eventually apply game keymap, if any */
+	sprintf(&command[7], "%s/%s.key", dname, bname);
 	if (!access(&command[7], R_OK)) {
 		fp = popen(command, "r");
 		if (fp != NULL) {
-			printf("Applied game keymap command: \"%s\"\n", command);
 			pclose(fp);
+		} else {
+			fprintf(stderr, "WARNING: Cannot apply game keymap command: \"%s\"\n",
+				command);
 		}
-		else{
-			fprintf(stderr, "WARNING: Cannot apply game keymap command: \"%s\"\n", command);
-		}	
 	}
 	free(dirc);
 	free(basec);
@@ -508,11 +514,11 @@ int main(int argc, char **argv)
 	int status;
 	waitpid(son, &status, 0);
 
-	/* move back to / folder */
+	/* Move back to / folder */
 	chdir("/");
 
 	/* Restore default keymap */
-	fp = popen("keymap default", "r");
+	fp = popen("keymap reset", "r");
 	if (fp != NULL) {
 		pclose(fp);
 	}

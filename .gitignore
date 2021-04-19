@@ -4,3 +4,10 @@ opkinfo
 opkrun
 libopk.plist
 unsqfs.plist
+CMakeCache.txt
+CMakeFiles/
+Makefile
+bindings/
+*.cmake
+*.pc
+*.so
