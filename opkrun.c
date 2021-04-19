@@ -449,6 +449,7 @@ int main(int argc, char **argv)
 	if (!access(&command[7], R_OK)) {
 		fp = popen(command, "r");
 		if (fp != NULL) {
+			printf("Applied console keymap command: \"%s\"\n", command);
 			pclose(fp);
 		} else {
 			fprintf(stderr, "WARNING: Cannot apply console keymap command: \"%s\"\n",
@@ -462,6 +463,7 @@ int main(int argc, char **argv)
 		if (!access(&command[7], R_OK)) {
 			fp = popen(command, "r");
 			if (fp != NULL) {
+				printf("Applied FK-Keymap command: \"%s\"\n", command);
 				pclose(fp);
 			} else {
 				fprintf(stderr, "WARNING: Cannot apply FK-Keymap command: \"%s\"\n",
@@ -475,6 +477,7 @@ int main(int argc, char **argv)
 	if (!access(&command[7], R_OK)) {
 		fp = popen(command, "r");
 		if (fp != NULL) {
+			printf("Applied game keymap command: \"%s\"\n", command);
 			pclose(fp);
 		} else {
 			fprintf(stderr, "WARNING: Cannot apply game keymap command: \"%s\"\n",
