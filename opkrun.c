@@ -431,8 +431,9 @@ int main(int argc, char **argv)
 	char command[PATH_MAX];
 	strcpy(command, "keymap rom");
 	if (rom_arg >= 0) {
-		strcat(command, " ");
+		strcat(command, " \"");
 		strncat(command, args[rom_arg], PATH_MAX - 1);
+		strncat(command, "\"", PATH_MAX - 1);
 	}
 	printf("Applied keymap rom command: \"%s\"\n", command);
 	system(command);
