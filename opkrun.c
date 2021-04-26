@@ -348,16 +348,19 @@ int main(int argc, char **argv)
 	 * with the filenames passed as parameter of opkrun */
 	char **ptr;
 	unsigned int arg;
-	for (arg = 0, ptr = params.exec; *ptr && arg < NB_PARAMS_MAX; ptr++, arg++) {
+	int rom_arg;
+	for (arg = 0, rom_arg = -1, ptr = params.exec; *ptr && arg < NB_PARAMS_MAX; ptr++, arg++) {
 		if (!strcmp("%f", *ptr)) {
 			if (!opk_argc) {
 				fprintf(stderr, "WARNING: OPK requires a file as parameter, but none was given\n");
 			} else {
+				rom_arg = arg;
 				args[arg] = realpath(*opk_argv++, NULL);
 				if (--opk_argc)
 					fprintf(stderr, "WARNING: OPK requires only one file as parameter\n");
 			}
 		} else if (!strcmp("%F", *ptr)) {
+			rom_arg = arg;
 			while (opk_argc && arg < NB_PARAMS_MAX) {
 				args[arg++] = realpath(*opk_argv++, NULL);
 				opk_argc--;
@@ -367,11 +370,13 @@ int main(int argc, char **argv)
 			if (!opk_argc) {
 				fprintf(stderr, "WARNING: OPK requires an URL as parameter, but none was given\n");
 			} else {
+				rom_arg = arg;
 				args[arg] = get_url(*opk_argv++);
 				if (--opk_argc)
 					fprintf(stderr, "WARNING: OPK requires only one URL as parameter\n");
 			}
 		} else if (!strcmp("%U", *ptr)) {
+			rom_arg = arg;
 			while (opk_argc && arg < NB_PARAMS_MAX) {
 				args[arg++] = get_url(*opk_argv++);
 				opk_argc--;
@@ -422,69 +427,15 @@ int main(int argc, char **argv)
 	if (params.needs_downscaling)
 		enable_downscaling();
 
-	/* Apply keymaps if found */
-	char *dirc = strdup(args[arg - 1]);
-	char *dname = dirname(dirc);
-	char *basec = strdup(args[arg - 1]);
-	char *bname = basename(basec);
-	char *p, command[PATH_MAX];
-	FILE *fp;
-
-	/* Initialize keymap command */
-	strcpy(command, "keymap ");
-
-	/*  Compute basename without suffix */
-	p = strrchr(bname, '.');
-	if (p) {
-		*p = '\0';
+	/* Initialize keymap rom command */
+	char command[PATH_MAX];
+	strcpy(command, "keymap rom");
+	if (rom_arg >= 0) {
+		strcat(command, " ");
+		strncat(command, args[rom_arg], PATH_MAX - 1);
 	}
-
-	/* Apply console (directory) keymap first, if any */
-	sprintf(&command[7], "%s/default_config.key", dname);
-	if (!access(&command[7], R_OK)) {
-		fp = popen(command, "r");
-		if (fp != NULL) {
-			printf("Applied console keymap command: \"%s\"\n", command);
-			pclose(fp);
-		} else {
-			fprintf(stderr, "WARNING: Cannot apply console keymap command: \"%s\"\n",
-				command);
-		}
-	}
-
-	/* Then apply OPk keymap, if any */
-	if (params.keymap != NULL) {
-		if (params.keymap[0] == '/') {
-			sprintf(&command[7], params.keymap);
-		} else {
-			sprintf(&command[7], "%s/%s", OPK_MOUNTPOINT, params.keymap);
-		}
-		if (!access(&command[7], R_OK)) {
-			fp = popen(command, "r");
-			if (fp != NULL) {
-				printf("Applied FK-Keymap command: \"%s\"\n", command);
-				pclose(fp);
-			} else {
-				fprintf(stderr, "WARNING: Cannot apply FK-Keymap command: \"%s\"\n",
-					command);
-			}
-		}
-	}
-
-	/* Eventually apply game keymap, if any */
-	sprintf(&command[7], "%s/%s.key", dname, bname);
-	if (!access(&command[7], R_OK)) {
-		fp = popen(command, "r");
-		if (fp != NULL) {
-			printf("Applied game keymap command: \"%s\"\n", command);
-			pclose(fp);
-		} else {
-			fprintf(stderr, "WARNING: Cannot apply game keymap command: \"%s\"\n",
-				command);
-		}
-	}
-	free(dirc);
-	free(basec);
+	printf("Applied keymap rom command: \"%s\"\n", command);
+	system(command);
 
 	/* Launch executable here */
 	pid_t son = fork();
@@ -497,7 +448,7 @@ int main(int argc, char **argv)
 		execvp(args[0], args);
 	}
 
-	fp = fopen("/var/run/funkey.pid", "w");
+	FILE *fp = fopen("/var/run/funkey.pid", "w");
 	if (fp != NULL) {
 		fprintf(fp, "%d\n", son);
 		fclose(fp);
@@ -511,10 +462,7 @@ int main(int argc, char **argv)
 	chdir("/");
 
 	/* Restore default keymap */
-	fp = popen("keymap reset", "r");
-	if (fp != NULL) {
-		pclose(fp);
-	}
+	system("keymap default");
 
 	/** Multiple trials to unmount OPK_MOUNTPOINT */
 	#define MAX_UMOUNT_TRIALS	100
