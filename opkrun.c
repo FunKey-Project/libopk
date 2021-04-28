@@ -429,11 +429,11 @@ int main(int argc, char **argv)
 
 	/* Initialize keymap rom command */
 	char command[PATH_MAX];
-	strcpy(command, "keymap rom");
 	if (rom_arg >= 0) {
-		strcat(command, " \"");
-		strncat(command, args[rom_arg], PATH_MAX - 1);
-		strncat(command, "\"", PATH_MAX - 1);
+		snprintf(command, PATH_MAX - 1, "keymap rom '%s'",
+			args[rom_arg]);
+	} else {
+		strcpy(command, "keymap rom");
 	}
 	printf("Applied keymap rom command: \"%s\"\n", command);
 	system(command);
