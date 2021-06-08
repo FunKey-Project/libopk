@@ -411,6 +411,12 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
+	FILE *opk_fp = fopen("/mnt/last_opk", "w");
+	if (opk_fp != NULL) {
+		fputs(opk_name, opk_fp);
+		fclose(opk_fp);
+	}
+
 	/* move back to OPK_MOUNTPOINT folder */
 	chdir(OPK_MOUNTPOINT);
 
