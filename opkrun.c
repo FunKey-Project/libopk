@@ -455,15 +455,14 @@ int main(int argc, char **argv)
 		execvp(args[0], args);
 	}
 
-	FILE *fp = fopen("/var/run/funkey.pid", "w");
-	if (fp != NULL) {
-		fprintf(fp, "%d\n", son);
-		fclose(fp);
-	}
+	/* Record the PID into a file */
+	sprintf(command, "pid record %d", son);
+	system(command);
 
 	/* Wait for son pid to finish */
 	int status;
 	waitpid(son, &status, 0);
+	system("pid erase");
 
 	/* Move back to / folder */
 	chdir("/");
